@@ -1,6 +1,8 @@
 use std::time::Duration;
-use tracing::{info, instrument, span, Level};
+use tracing::{info, span, subscriber::set_default, Level};
 use anyhow::Result;
+use tracing_futures::Instrument;
+use tracing_subscriber::layer::SubscriberExt;
 
 mod proto {
     tonic::include_proto!("my_service");
@@ -17,8 +19,6 @@ impl proto::my_service_server::MyService for App {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let format = tracing_subscriber::fmt::format().with_target(false).compact();
-    tracing_subscriber::fmt().event_format(format).init();
 
     let mut free_ports = vec![];
     for _ in 0..20 {
@@ -28,9 +28,11 @@ async fn main() -> Result<()> {
     dbg!(&free_ports);
 
     for port in free_ports.clone() {
+        let format = tracing_subscriber::fmt::format().with_thread_ids(true).with_target(false).compact();
+        let sub = tracing_subscriber::fmt().event_format(format).finish();
+
         let svc_task = async move {
-            let span = span!(Level::INFO, "ND>", id = port);
-            let _enter = span.enter();
+            let _g = set_default(sub);
 
             let svc = proto::my_service_server::MyServiceServer::new(App);
             let socket = format!("0.0.0.0:{port}").parse().unwrap();
