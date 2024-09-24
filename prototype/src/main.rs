@@ -58,7 +58,7 @@ where
 #[tokio::main]
 async fn main() -> Result<()> {
     let format = tracing_subscriber::fmt::format()
-        // .with_thread_ids(true)
+        .with_thread_ids(true)
         .with_thread_names(true)
         .with_target(false)
         .compact();
@@ -108,7 +108,7 @@ async fn main() -> Result<()> {
     let mut rng = thread_rng();
     for _ in 0..10 {
         let tgt_port = free_ports.choose(&mut rng).unwrap();
-        // dbg!(tgt_port);
+        dbg!(tgt_port);
         let mut cli = proto::my_service_client::MyServiceClient::connect(format!(
             "http://localhost:{tgt_port}"
         ))

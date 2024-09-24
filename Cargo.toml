@@ -1,20 +1,5 @@
-[package]
-name = "loltest-log-experiment"
-version = "0.1.0"
-edition = "2021"
-
-[dependencies]
-anyhow = "1.0.89"
-port_check = "0.2.1"
-prost = "0.13.3"
-rand = "0.8.5"
-tokio = { version = "1.40.0", features = ["full"] }
-tonic = "0.12.2"
-tonic-build = "0.12.2"
-tracing = "0.1.40"
-tracing-futures = "0.2.5"
-tracing-subscriber = "0.3.18"
-
-[build-dependencies]
-prost-build = "0.13.3"
-tonic-build = "0.12.2"
+[workspace]
+members = [
+  "prototype",
+  "envlib",
+]
