@@ -1,15 +1,17 @@
 use anyhow::Result;
 use tracing::dispatcher::set_global_default;
 use tracing::instrument::WithSubscriber;
-use std::time::Duration;
-use tracing::{info, subscriber::set_default};
-use tracing_subscriber::fmt::{self, layer};
-use tracing_subscriber::fmt::format::Writer;
-use tracing_subscriber::fmt::FormatEvent;
-use tracing_subscriber::registry::LookupSpan;
-use tracing::Dispatch;
+use tracing::{span, trace_span};
+// use tracing_futures::WithSubscriber;
 use rand::seq::SliceRandom;
 use rand::thread_rng;
+use std::time::Duration;
+use tracing::{info, subscriber::set_default};
+use tracing::{Dispatch, Instrument};
+use tracing_subscriber::fmt::format::Writer;
+use tracing_subscriber::fmt::FormatEvent;
+use tracing_subscriber::fmt::{self, layer};
+use tracing_subscriber::registry::LookupSpan;
 
 mod proto {
     tonic::include_proto!("my_service");
@@ -55,6 +57,13 @@ where
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    let format = tracing_subscriber::fmt::format()
+        // .with_thread_ids(true)
+        .with_thread_names(true)
+        .with_target(false)
+        .compact();
+    tracing_subscriber::fmt().event_format(format).init();
+
     let mut free_ports = vec![];
     for _ in 0..10 {
         let p = port_check::free_local_ipv4_port().unwrap();
@@ -63,14 +72,14 @@ async fn main() -> Result<()> {
     dbg!(&free_ports);
 
     for port in free_ports.clone() {
-        let format = tracing_subscriber::fmt::format()
-            .with_target(false)
-            .compact();
-        let nd_number = format!("ND{port}");
-    
+        let nd_number = format!("ND{port}>");
 
         let svc_task = async move {
-            // let _g = set_default(sub);
+            info!("I am not spawned.");
+
+            tokio::spawn(async move {
+                info!("I am spawned.");
+            });
 
             let svc = proto::my_service_server::MyServiceServer::new(App);
             let socket = format!("0.0.0.0:{port}").parse().unwrap();
@@ -80,18 +89,21 @@ async fn main() -> Result<()> {
                 .await
                 .unwrap();
         };
-        // tokio::spawn(svc_task);
 
-        std::thread::spawn(move || {
-            let format = PrefixedFormatter::new(format, nd_number);
-            let sub = tracing_subscriber::fmt().event_format(format).finish();
-            let _g = set_default(sub);
-            let runtime = tokio::runtime::Runtime::new().unwrap();
-            runtime.block_on(svc_task);
-        });
+        std::thread::Builder::new()
+            .name(nd_number.clone())
+            .spawn(move || {
+                let runtime = tokio::runtime::Builder::new_multi_thread()
+                    .thread_name(nd_number)
+                    .enable_all()
+                    .build()
+                    .unwrap();
+                runtime.block_on(svc_task);
+            })
+            .unwrap();
     }
 
-    tokio::time::sleep(Duration::from_secs(5)).await;
+    tokio::time::sleep(Duration::from_secs(1)).await;
 
     let mut rng = thread_rng();
     for _ in 0..10 {
