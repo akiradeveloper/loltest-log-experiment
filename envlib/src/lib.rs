@@ -33,9 +33,7 @@ impl Node {
         let (tx, rx) = tokio::sync::oneshot::channel();
 
         let svc_task = async move {
-            tokio::spawn(async move {
-                info!("add (id={id})");
-            });
+            info!("add (id={id})");
 
             let svc = proto::my_service_server::MyServiceServer::new(App);
             let socket = format!("127.0.0.1:{port}").parse().unwrap();
