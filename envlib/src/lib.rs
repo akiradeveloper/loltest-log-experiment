@@ -130,7 +130,9 @@ mod tests {
     #[tokio::test]
     async fn test_env_2() {
         let mut env = Env::new();
-        env.add_node(1);
+        for id in 0..=255 {
+            env.add_node(id);
+        }
         tokio::time::sleep(Duration::from_secs(1)).await;
     }
 }
