@@ -23,7 +23,6 @@ impl proto::my_service_server::MyService for App {
 static INIT: Once = Once::new();
 
 struct Node {
-    id: u8,
     port: u16,
     abort_tx0: Option<tokio::sync::oneshot::Sender<()>>,
 }
@@ -60,7 +59,6 @@ impl Node {
             .unwrap();
 
         Ok(Self {
-            id,
             port,
             abort_tx0: Some(tx),
         })
@@ -92,6 +90,7 @@ impl Env {
     pub fn add_node(&mut self, id: u8) {
         let free_port = port_check::free_local_ipv4_port().unwrap();
         let node = Node::new(id, free_port).unwrap();
+        port_check::is_port_reachable_with_timeout(format!("http://127.0.0.1:{free_port}"), Duration::from_secs(5));
         self.nodes.insert(id, node);
     }
 
@@ -115,14 +114,12 @@ mod tests {
     async fn test_env_1() {
         let mut env = Env::new();
         env.add_node(1);
-        tokio::time::sleep(Duration::from_secs(1)).await;
 
         let mut cli = env.connect_ping_client(1).await.unwrap();
         cli.ping(()).await.unwrap();
 
         env.remove_node(1);
         env.add_node(1);
-        tokio::time::sleep(Duration::from_secs(1)).await;
     }
 
     #[tokio::test]
@@ -131,6 +128,5 @@ mod tests {
         for id in 0..=255 {
             env.add_node(id);
         }
-        tokio::time::sleep(Duration::from_secs(1)).await;
     }
 }
